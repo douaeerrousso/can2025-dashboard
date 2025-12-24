@@ -3,7 +3,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { AlertTriangle, Users, TrendingUp, Phone, Activity } from 'lucide-react';
 
 const SUPABASE_URL = "https://qpwwceigajtigvhpmbpg.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwd3djZWlnYWp0aWd2aHBtYnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUwNzA3NzQsImV4cCI6MjA1MDY0Njc3NH0.iq_WCYhKFrEukGWTmO1DdT-HLSEyM6jUXWvL9xLsLNQ";
+const SUPABASE_KEY = "sb_publishable_hYAcKlZbCfCdW-SzdiEIDA_Ng7jGwO7";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 const CAPACITY = {
