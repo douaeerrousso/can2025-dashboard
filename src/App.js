@@ -38,14 +38,21 @@ function App() {
         }
       );
       
-      const result = await response.json();
-      setData(result);
-      setLastUpdate(new Date());
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
-      const newAlerts = result
-        .filter(r => r.nombre_supporters > (CAPACITY[r.stade] || 50000) * 0.8)
-        .slice(0, 5);
-      setAlerts(newAlerts);
+      const result = await response.json();
+      
+      if (Array.isArray(result) && result.length > 0) {
+        setData(result);
+        setLastUpdate(new Date());
+        
+        const newAlerts = result
+          .filter(r => r.nombre_supporters > (CAPACITY[r.stade] || 50000) * 0.8)
+          .slice(0, 5);
+        setAlerts(newAlerts);
+      }
       
       setLoading(false);
     } catch (error) {
@@ -74,7 +81,7 @@ function App() {
   }));
 
   const totalSupporters = stadeStats.reduce((sum, s) => sum + s.supporters, 0);
-  const avgOccupancy = Math.round(stadeStats.reduce((sum, s) => sum + s.taux, 0) / stadeStats.length);
+  const avgOccupancy = stadeStats.length > 0 ? Math.round(stadeStats.reduce((sum, s) => sum + s.taux, 0) / stadeStats.length) : 0;
   const criticalStades = stadeStats.filter(s => s.taux > 80).length;
 
   if (loading) {
@@ -85,12 +92,23 @@ function App() {
     );
   }
 
+  if (data.length === 0) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #166534 0%, #991b1b 50%, #ca8a04 100%)' }}>
+        <div style={{ color: 'white', fontSize: '24px', textAlign: 'center' }}>
+          <div>🏟️ Aucune donnée disponible</div>
+          <div style={{ fontSize: '16px', marginTop: '16px' }}>Envoyez des images à l'API Koyeb pour démarrer</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #166534 0%, #991b1b 50%, #ca8a04 100%)', padding: '24px' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.2)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>🏆 CAN 2025 - Surveillance Affluence</h1>
               <p style={{ color: '#bbf7d0' }}>Système de Gestion Temps Réel des Stades</p>
@@ -206,21 +224,23 @@ function App() {
           </div>
 
           {/* Graphique temporel */}
-          <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', gridColumn: '1 / -1' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📈 Évolution des 30 Dernières Minutes</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={timeSeriesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="time" stroke="#fff" />
-                <YAxis stroke="#fff" />
-                <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px' }} />
-                <Legend />
-                {Object.keys(latestByStade).map((stade, i) => (
-                  <Line key={stade} type="monotone" dataKey={stade} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 4 }} />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {timeSeriesData.length > 0 && (
+            <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', gridColumn: '1 / -1' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📈 Évolution des 30 Dernières Minutes</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={timeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="time" stroke="#fff" />
+                  <YAxis stroke="#fff" />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px' }} />
+                  <Legend />
+                  {Object.keys(latestByStade).map((stade, i) => (
+                    <Line key={stade} type="monotone" dataKey={stade} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 4 }} />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Tableau */}
           <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', gridColumn: '1 / -1' }}>
