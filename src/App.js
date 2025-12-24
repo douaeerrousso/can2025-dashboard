@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { AlertTriangle, Users, TrendingUp, Phone, Activity } from 'lucide-react';
+import { AlertTriangle, Users, TrendingUp, Phone, Activity, Upload, Camera } from 'lucide-react';
 
 const SUPABASE_URL = "https://qpwwceigajtigvhpmbpg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hYAcKlZbCfCdW-SzdiEIDA_Ng7jGwO7";
@@ -19,6 +19,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [alerts, setAlerts] = useState([]);
+  
+  // États pour l'ajout d'image
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [selectedStade, setSelectedStade] = useState('Rabat');
 
   useEffect(() => {
     fetchData();
@@ -38,9 +43,7 @@ function App() {
         }
       );
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
       const result = await response.json();
       
@@ -53,11 +56,44 @@ function App() {
           .slice(0, 5);
         setAlerts(newAlerts);
       }
-      
       setLoading(false);
     } catch (error) {
       console.error('Erreur Supabase:', error);
       setLoading(false);
+    }
+  };
+
+  // Fonction pour envoyer l'image au modèle YOLO sur Koyeb
+  const handleImageUpload = async () => {
+    if (!selectedImage) {
+      alert("Veuillez sélectionner une image d'abord.");
+      return;
+    }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('image', selectedImage);
+    formData.append('stade', selectedStade); // Envoie aussi le nom du stade concerné
+
+    try {
+      // REMPLACEZ CETTE URL PAR VOTRE URL KOYEB REELLE
+      const response = await fetch('URL_DE_VOTRE_API_KOYEB_ICI/predict', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        alert("Analyse réussie ! Les données ont été mises à jour.");
+        setSelectedImage(null);
+        fetchData(); // Rafraîchit les graphiques
+      } else {
+        alert("Erreur lors de l'analyse par le modèle YOLO sur Koyeb.");
+      }
+    } catch (error) {
+      console.error("Erreur d'upload:", error);
+      alert("Impossible de contacter le serveur Koyeb.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -84,21 +120,10 @@ function App() {
   const avgOccupancy = stadeStats.length > 0 ? Math.round(stadeStats.reduce((sum, s) => sum + s.taux, 0) / stadeStats.length) : 0;
   const criticalStades = stadeStats.filter(s => s.taux > 80).length;
 
-  if (loading) {
+  if (loading && data.length === 0) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #166534 0%, #991b1b 50%, #ca8a04 100%)' }}>
-        <div style={{ color: 'white', fontSize: '24px' }}>Chargement des données CAN 2025...</div>
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #166534 0%, #991b1b 50%, #ca8a04 100%)' }}>
-        <div style={{ color: 'white', fontSize: '24px', textAlign: 'center' }}>
-          <div>🏟️ Aucune donnée disponible</div>
-          <div style={{ fontSize: '16px', marginTop: '16px' }}>Envoyez des images à l'API Koyeb pour démarrer</div>
-        </div>
+        <div style={{ color: 'white', fontSize: '24px' }}>Connexion au système CAN 2025...</div>
       </div>
     );
   }
@@ -106,181 +131,148 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #166534 0%, #991b1b 50%, #ca8a04 100%)', padding: '24px' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+        
         {/* Header */}
         <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.2)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
-              <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>🏆 CAN 2025 - Surveillance Affluence</h1>
-              <p style={{ color: '#bbf7d0' }}>Système de Gestion Temps Réel des Stades</p>
+              <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>🏆 CAN 2025 - Surveillance Affluence</h1>
+              <p style={{ color: '#bbf7d0' }}>Analyse par IA YOLOv8 & Monitoring Temps Réel</p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ color: 'white', fontSize: '14px' }}>Dernière mise à jour</div>
+              <div style={{ color: 'white', fontSize: '12px', opacity: 0.8 }}>Dernière synchro</div>
               <div style={{ color: '#fde047', fontFamily: 'monospace', fontSize: '18px' }}>{lastUpdate.toLocaleTimeString('fr-FR')}</div>
             </div>
           </div>
         </div>
 
+        {/* SECTION NOUVELLE : Upload Image YOLOv8 */}
+        <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', marginBottom: '24px', border: '2px dashed rgba(255,255,255,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+            <Camera color="white" size={24} />
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>Nouvelle Analyse Image (Modèle Koyeb)</h2>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <select 
+              value={selectedStade} 
+              onChange={(e) => setSelectedStade(e.target.value)}
+              style={{ padding: '10px', borderRadius: '6px', border: 'none', background: 'white' }}
+            >
+              {Object.keys(CAPACITY).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => setSelectedImage(e.target.files[0])}
+              style={{ color: 'white' }}
+            />
+
+            <button 
+              onClick={handleImageUpload}
+              disabled={uploading || !selectedImage}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 20px', backgroundColor: '#22c55e', color: 'white', 
+                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
+                opacity: (uploading || !selectedImage) ? 0.5 : 1
+              }}
+            >
+              {uploading ? "Analyse..." : <><Upload size={18} /> Lancer YOLOv8</>}
+            </button>
+          </div>
+        </div>
+
         {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ background: 'rgba(59,130,246,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(147,197,253,0.3)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ background: 'rgba(59,130,246,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', border: '1px solid rgba(147,197,253,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: '#bfdbfe', fontSize: '14px' }}>Total Supporters</p>
-                <p style={{ color: 'white', fontSize: '30px', fontWeight: 'bold' }}>{totalSupporters.toLocaleString()}</p>
-              </div>
-              <Users color="#93c5fd" size={40} />
+              <div><p style={{ color: '#bfdbfe', fontSize: '14px' }}>Total Supporters</p><p style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>{totalSupporters.toLocaleString()}</p></div>
+              <Users color="#93c5fd" size={32} />
             </div>
           </div>
-
-          <div style={{ background: 'rgba(34,197,94,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(134,239,172,0.3)' }}>
+          <div style={{ background: 'rgba(34,197,94,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', border: '1px solid rgba(134,239,172,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: '#bbf7d0', fontSize: '14px' }}>Taux Moyen</p>
-                <p style={{ color: 'white', fontSize: '30px', fontWeight: 'bold' }}>{avgOccupancy}%</p>
-              </div>
-              <TrendingUp color="#86efac" size={40} />
+              <div><p style={{ color: '#bbf7d0', fontSize: '14px' }}>Taux Moyen</p><p style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>{avgOccupancy}%</p></div>
+              <TrendingUp color="#86efac" size={32} />
             </div>
           </div>
-
-          <div style={{ background: 'rgba(239,68,68,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(252,165,165,0.3)' }}>
+          <div style={{ background: 'rgba(239,68,68,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', border: '1px solid rgba(252,165,165,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: '#fecaca', fontSize: '14px' }}>Stades Critiques</p>
-                <p style={{ color: 'white', fontSize: '30px', fontWeight: 'bold' }}>{criticalStades}</p>
-              </div>
-              <AlertTriangle color="#fca5a5" size={40} />
+              <div><p style={{ color: '#fecaca', fontSize: '14px' }}>Saturé ( +80% )</p><p style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>{criticalStades}</p></div>
+              <AlertTriangle color="#fca5a5" size={32} />
             </div>
           </div>
-
-          <div style={{ background: 'rgba(168,85,247,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(216,180,254,0.3)' }}>
+          <div style={{ background: 'rgba(168,85,247,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', border: '1px solid rgba(216,180,254,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: '#e9d5ff', fontSize: '14px' }}>Stades Actifs</p>
-                <p style={{ color: 'white', fontSize: '30px', fontWeight: 'bold' }}>{stadeStats.length}</p>
-              </div>
-              <Activity color="#d8b4fe" size={40} />
+              <div><p style={{ color: '#e9d5ff', fontSize: '14px' }}>Stades Actifs</p><p style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>{stadeStats.length}</p></div>
+              <Activity color="#d8b4fe" size={32} />
             </div>
           </div>
         </div>
 
-        {/* Alertes */}
-        {alerts.length > 0 && (
-          <div style={{ background: 'rgba(239,68,68,0.2)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', marginBottom: '24px', border: '1px solid rgba(252,165,165,0.3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <Phone color="#fca5a5" size={24} />
-              <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>Alertes SMS Twilio Actives</h2>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {alerts.map((alert, i) => (
-                <div key={i} style={{ background: 'rgba(127,29,29,0.3)', borderRadius: '4px', padding: '12px', color: 'white' }}>
-                  🚨 <strong>{alert.stade}</strong>: {alert.nombre_supporters.toLocaleString()} supporters 
-                  ({Math.round((alert.nombre_supporters / (CAPACITY[alert.stade] || 50000)) * 100)}% capacité) 
-                  - {new Date(alert.timestamp).toLocaleTimeString('fr-FR')}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px' }}>
-          {/* Graphique en barres */}
+        {/* Graphiques */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))', gap: '24px' }}>
           <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📊 Occupation Actuelle des Stades</h2>
-            <ResponsiveContainer width="100%" height={300}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📊 Occupation des Stades</h2>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={stadeStats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                 <XAxis dataKey="name" stroke="#fff" />
                 <YAxis stroke="#fff" />
                 <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px' }} />
-                <Legend />
                 <Bar dataKey="supporters" fill="#4ade80" name="Supporters" />
-                <Bar dataKey="capacity" fill="#94a3b8" name="Capacité Max" />
+                <Bar dataKey="capacity" fill="rgba(255,255,255,0.2)" name="Capacité Max" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Diagramme circulaire */}
           <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>🥧 Répartition des Supporters</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stadeStats}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={entry => `${entry.name}: ${entry.taux}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="supporters"
-                >
-                  {stadeStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📈 Évolution (Derniers relevés)</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="time" stroke="#fff" />
+                <YAxis stroke="#fff" />
                 <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px' }} />
-              </PieChart>
+                <Legend />
+                {Object.keys(latestByStade).map((stade, i) => (
+                  <Line key={stade} type="monotone" dataKey={stade} stroke={COLORS[i % COLORS.length]} strokeWidth={3} dot={{ r: 4 }} />
+                ))}
+              </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Graphique temporel */}
-          {timeSeriesData.length > 0 && (
-            <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', gridColumn: '1 / -1' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📈 Évolution des 30 Dernières Minutes</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={timeSeriesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                  <XAxis dataKey="time" stroke="#fff" />
-                  <YAxis stroke="#fff" />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px' }} />
-                  <Legend />
-                  {Object.keys(latestByStade).map((stade, i) => (
-                    <Line key={stade} type="monotone" dataKey={stade} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 4 }} />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Tableau */}
+          {/* Tableau Détaillé */}
           <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', gridColumn: '1 / -1' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📋 Vue Détaillée des Stades</h2>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', color: 'white', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                    <th style={{ textAlign: 'left', padding: '12px' }}>Stade</th>
-                    <th style={{ textAlign: 'right', padding: '12px' }}>Supporters</th>
-                    <th style={{ textAlign: 'right', padding: '12px' }}>Capacité</th>
-                    <th style={{ textAlign: 'right', padding: '12px' }}>Taux</th>
-                    <th style={{ textAlign: 'center', padding: '12px' }}>Statut</th>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>📋 Vue Détaillée</h2>
+            <table style={{ width: '100%', color: 'white', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', opacity: 0.7 }}>
+                  <th style={{ textAlign: 'left', padding: '12px' }}>Stade</th>
+                  <th style={{ textAlign: 'right', padding: '12px' }}>Supporters</th>
+                  <th style={{ textAlign: 'right', padding: '12px' }}>Taux</th>
+                  <th style={{ textAlign: 'center', padding: '12px' }}>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stadeStats.map((s, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '12px', fontWeight: 'bold' }}>{s.name}</td>
+                    <td style={{ textAlign: 'right', padding: '12px' }}>{s.supporters.toLocaleString()} / {s.capacity.toLocaleString()}</td>
+                    <td style={{ textAlign: 'right', padding: '12px', color: s.taux > 80 ? '#fca5a5' : '#86efac' }}>{s.taux}%</td>
+                    <td style={{ textAlign: 'center', padding: '12px' }}>{s.taux > 80 ? '🔴 Critique' : '🟢 Normal'}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {stadeStats.map((s, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                      <td style={{ padding: '12px', fontWeight: '600' }}>{s.name}</td>
-                      <td style={{ textAlign: 'right', padding: '12px' }}>{s.supporters.toLocaleString()}</td>
-                      <td style={{ textAlign: 'right', padding: '12px' }}>{s.capacity.toLocaleString()}</td>
-                      <td style={{ textAlign: 'right', padding: '12px' }}>
-                        <span style={{ fontWeight: 'bold', color: s.taux > 80 ? '#fca5a5' : s.taux > 60 ? '#fde047' : '#86efac' }}>
-                          {s.taux}%
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center', padding: '12px' }}>
-                        {s.taux > 80 ? '🔴 Saturé' : s.taux > 60 ? '🟡 Moyen' : '🟢 Fluide'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ marginTop: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
-          <p>Système développé pour la CAN 2025 | Koyeb + Supabase + Twilio | YOLOv8</p>
+        <div style={{ marginTop: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
+          <p>CAN 2025 Intelligence System | Koyeb API + YOLOv8 + Supabase</p>
         </div>
       </div>
     </div>
