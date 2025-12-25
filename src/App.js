@@ -14,7 +14,7 @@ const SUPABASE_KEY = "sb_publishable_hYAcKlZbCfCdW-SzdiEIDA_Ng7jGwO7";
 
 // URL Railway mise à jour
 
-const RAILWAY_API_URL = "https://can-2025-api-production.up.railway.app/predict";
+const RAILWAY_API_URL = "https://can-2025-api-production.up.railway.app/predict";  
 
 
 
