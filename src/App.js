@@ -5,6 +5,9 @@ import { AlertTriangle, Users, TrendingUp, Phone, Activity, Upload, Camera } fro
 const SUPABASE_URL = "https://qpwwceigajtigvhpmbpg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hYAcKlZbCfCdW-SzdiEIDA_Ng7jGwO7";
 
+// URL Railway mise à jour
+const RAILWAY_API_URL = "https://can-2025-api-production.up.railway.app/predict";
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 const CAPACITY = {
   'Rabat': 50000,
@@ -63,7 +66,7 @@ function App() {
     }
   };
 
-  // Fonction pour envoyer l'image au modèle YOLO sur Koyeb
+  // Fonction pour envoyer l'image au modèle YOLO sur Railway
   const handleImageUpload = async () => {
     if (!selectedImage) {
       alert("Veuillez sélectionner une image d'abord.");
@@ -73,25 +76,25 @@ function App() {
     setUploading(true);
     const formData = new FormData();
     formData.append('image', selectedImage);
-    formData.append('stade', selectedStade); // Envoie aussi le nom du stade concerné
+    formData.append('stade', selectedStade);
 
     try {
-      // REMPLACEZ CETTE URL PAR VOTRE URL KOYEB REELLE
-      const response = await fetch('URL_DE_VOTRE_API_KOYEB_ICI/predict', {
+      const response = await fetch(RAILWAY_API_URL, {
         method: 'POST',
         body: formData,
       });
 
       if (response.ok) {
-        alert("Analyse réussie ! Les données ont été mises à jour.");
+        alert("Analyse Railway réussie ! Les données ont été mises à jour.");
         setSelectedImage(null);
-        fetchData(); // Rafraîchit les graphiques
+        fetchData(); 
       } else {
-        alert("Erreur lors de l'analyse par le modèle YOLO sur Koyeb.");
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Erreur Railway: ${errorData.message || "Erreur lors de l'analyse par le modèle YOLO."}`);
       }
     } catch (error) {
       console.error("Erreur d'upload:", error);
-      alert("Impossible de contacter le serveur Koyeb.");
+      alert("Impossible de contacter le serveur Railway. Vérifiez votre connexion ou l'état du service.");
     } finally {
       setUploading(false);
     }
@@ -123,7 +126,7 @@ function App() {
   if (loading && data.length === 0) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #166534 0%, #991b1b 50%, #ca8a04 100%)' }}>
-        <div style={{ color: 'white', fontSize: '24px' }}>Connexion au système CAN 2025...</div>
+        <div style={{ color: 'white', fontSize: '24px' }}>Connexion au système Railway CAN 2025...</div>
       </div>
     );
   }
@@ -137,7 +140,7 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>🏆 CAN 2025 - Surveillance Affluence</h1>
-              <p style={{ color: '#bbf7d0' }}>Analyse par IA YOLOv8 & Monitoring Temps Réel</p>
+              <p style={{ color: '#bbf7d0' }}>Analyse par IA YOLOv8 (Railway) & Monitoring Temps Réel</p>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ color: 'white', fontSize: '12px', opacity: 0.8 }}>Dernière synchro</div>
@@ -146,11 +149,11 @@ function App() {
           </div>
         </div>
 
-        {/* SECTION NOUVELLE : Upload Image YOLOv8 */}
+        {/* SECTION Upload Image YOLOv8 */}
         <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', marginBottom: '24px', border: '2px dashed rgba(255,255,255,0.3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
             <Camera color="white" size={24} />
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>Nouvelle Analyse Image (Modèle Koyeb)</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>Nouvelle Analyse Image (Modèle Railway)</h2>
           </div>
           
           <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -179,7 +182,7 @@ function App() {
                 opacity: (uploading || !selectedImage) ? 0.5 : 1
               }}
             >
-              {uploading ? "Analyse..." : <><Upload size={18} /> Lancer YOLOv8</>}
+              {uploading ? "Analyse en cours..." : <><Upload size={18} /> Lancer YOLOv8</>}
             </button>
           </div>
         </div>
@@ -272,7 +275,7 @@ function App() {
 
         {/* Footer */}
         <div style={{ marginTop: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
-          <p>CAN 2025 Intelligence System | Koyeb API + YOLOv8 + Supabase</p>
+          <p>CAN 2025 Intelligence System | Railway API + YOLOv8 + Supabase</p>
         </div>
       </div>
     </div>
