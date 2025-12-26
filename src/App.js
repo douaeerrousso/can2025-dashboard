@@ -69,8 +69,10 @@ function App() {
 
     setUploading(true);
     const formData = new FormData();
-    formData.append('image', selectedImage);
-    formData.append('stade', selectedStade);
+
+    // ⚠️ Correction des noms des champs
+    formData.append('file', selectedImage);        // au lieu de 'image'
+    formData.append('stade_name', selectedStade); // au lieu de 'stade'
 
     try {
       const response = await fetch(RAILWAY_API_URL, {
@@ -83,7 +85,6 @@ function App() {
         setSelectedImage(null);
         fetchData(); 
       } else {
-        // Correction : Gestion si le serveur renvoie du texte plutôt que du JSON
         const errorText = await response.text();
         let message = "Erreur lors de l'analyse.";
         try {
