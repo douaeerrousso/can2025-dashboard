@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { AlertTriangle, Users, TrendingUp, Activity, Upload, Camera } from 'lucide-react';
+import { AlertTriangle, Users, TrendingUp, Activity, Upload, Camera, Zap, Shield, ShoppingCart, Clock } from 'lucide-react';
 
 const SUPABASE_URL = "https://qpwwceigajtigvhpmbpg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hYAcKlZbCfCdW-SzdiEIDA_Ng7jGwO7";
-
-// URL Railway extraite de vos paramètres actifs
 const RAILWAY_API_URL = "https://can-2025-api-production.up.railway.app/predict";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -21,8 +19,6 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  
-  // États pour l'ajout d'image
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [selectedStade, setSelectedStade] = useState('Rabat');
@@ -37,18 +33,10 @@ function App() {
     try {
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/affluence?select=*&order=timestamp.desc&limit=100`,
-        {
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        }
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
       );
-      
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
       const result = await response.json();
-      
       if (Array.isArray(result) && result.length > 0) {
         setData(result);
         setLastUpdate(new Date());
@@ -60,47 +48,21 @@ function App() {
     }
   };
 
-  // FONCTION CORRIGÉE POUR L'ANALYSE RAILWAY
   const handleImageUpload = async () => {
-    if (!selectedImage) {
-      alert("Veuillez sélectionner une image d'abord.");
-      return;
-    }
-
+    if (!selectedImage) { alert("Veuillez sélectionner une image d'abord."); return; }
     setUploading(true);
     const formData = new FormData();
-
-    // ⚠️ Correction des noms des champs
-    formData.append('file', selectedImage);        // au lieu de 'image'
-    formData.append('stade_name', selectedStade); // au lieu de 'stade'
-
+    formData.append('file', selectedImage);
+    formData.append('stade_name', selectedStade);
     try {
-      const response = await fetch(RAILWAY_API_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
+      const response = await fetch(RAILWAY_API_URL, { method: 'POST', body: formData });
       if (response.ok) {
-        alert("Analyse Railway réussie ! Les données ont été mises à jour dans Supabase.");
+        alert("Analyse Railway réussie !");
         setSelectedImage(null);
         fetchData(); 
-      } else {
-        const errorText = await response.text();
-        let message = "Erreur lors de l'analyse.";
-        try {
-          const errorData = JSON.parse(errorText);
-          message = errorData.message || message;
-        } catch (e) {
-          message = errorText || message;
-        }
-        alert(`Erreur Railway: ${message}`);
       }
-    } catch (error) {
-      console.error("Erreur d'upload:", error);
-      alert("Impossible de joindre le serveur Railway. Vérifiez que le domaine est actif.");
-    } finally {
-      setUploading(false);
-    }
+    } catch (error) { console.error("Erreur d'upload:", error); } 
+    finally { setUploading(false); }
   };
 
   const latestByStade = data.reduce((acc, curr) => {
@@ -125,6 +87,18 @@ function App() {
   const totalSupporters = stadeStats.reduce((sum, s) => sum + s.supporters, 0);
   const avgOccupancy = stadeStats.length > 0 ? Math.round(stadeStats.reduce((sum, s) => sum + s.taux, 0) / stadeStats.length) : 0;
   const criticalStades = stadeStats.filter(s => s.taux > 80).length;
+
+  // --- LOGIQUE D'INTELLIGENCE OPÉRATIONNELLE ---
+  const operationalAlerts = stadeStats.map(s => {
+    const alerts = [];
+    // 1. Flux & Bousculades (Simulation Taux d'Arrivée)
+    if (s.taux > 70) alerts.push({ type: 'danger', msg: "Flux critique : Ouvrir portes de secours B & C", icon: <Zap size={16}/> });
+    // 2. Optimisation Personnel
+    if (s.taux > 90) alerts.push({ type: 'info', msg: "Pic atteint : Préparer réaffectation staff vers tribunes", icon: <Shield size={16}/> });
+    // 3. Commercial
+    if (s.taux > 85) alerts.push({ type: 'warning', msg: "Stocks Buvettes : Réapprovisionnement zone Nord", icon: <ShoppingCart size={16}/> });
+    return { name: s.name, alerts };
+  }).filter(item => item.alerts.length > 0);
 
   if (loading && data.length === 0) {
     return (
@@ -152,39 +126,42 @@ function App() {
           </div>
         </div>
 
+        {/* SECTION INTELLIGENCE OPÉRATIONNELLE (NOUVEAU) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ background: 'rgba(15, 23, 42, 0.8)', borderRadius: '8px', padding: '20px', border: '1px solid #334155', gridColumn: '1 / -1' }}>
+                <h2 style={{ color: '#fbbf24', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                    <Zap size={20}/> ACTIONS ET DÉCISIONS STRATÉGIQUES (IA PRÉDICTIVE)
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                    {operationalAlerts.length > 0 ? operationalAlerts.map(site => (
+                        <div key={site.name} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px' }}>
+                            <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px', borderBottom: '1px solid #444' }}>{site.name}</h3>
+                            {site.alerts.map((alert, idx) => (
+                                <div key={idx} style={{ 
+                                    display: 'flex', alignItems: 'center', gap: '10px', color: alert.type === 'danger' ? '#fca5a5' : '#93c5fd',
+                                    fontSize: '13px', marginBottom: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px'
+                                }}>
+                                    {alert.icon} {alert.msg}
+                                </div>
+                            ))}
+                        </div>
+                    )) : <p style={{ color: '#94a3b8' }}>Aucune action critique requise pour le moment.</p>}
+                </div>
+            </div>
+        </div>
+
         {/* SECTION Upload Image YOLOv8 */}
         <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '24px', marginBottom: '24px', border: '2px dashed rgba(255,255,255,0.3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
             <Camera color="white" size={24} />
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>Nouvelle Analyse Image (Modèle Railway)</h2>
           </div>
-          
           <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select 
-              value={selectedStade} 
-              onChange={(e) => setSelectedStade(e.target.value)}
-              style={{ padding: '10px', borderRadius: '6px', border: 'none', background: 'white' }}
-            >
+            <select value={selectedStade} onChange={(e) => setSelectedStade(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: 'none', background: 'white' }}>
               {Object.keys(CAPACITY).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={(e) => setSelectedImage(e.target.files[0])}
-              style={{ color: 'white' }}
-            />
-
-            <button 
-              onClick={handleImageUpload}
-              disabled={uploading || !selectedImage}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 20px', backgroundColor: '#22c55e', color: 'white', 
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
-                opacity: (uploading || !selectedImage) ? 0.5 : 1
-              }}
-            >
+            <input type="file" accept="image/*" onChange={(e) => setSelectedImage(e.target.files[0])} style={{ color: 'white' }} />
+            <button onClick={handleImageUpload} disabled={uploading || !selectedImage} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: (uploading || !selectedImage) ? 0.5 : 1 }}>
               {uploading ? "Analyse en cours..." : <><Upload size={18} /> Lancer YOLOv8</>}
             </button>
           </div>
@@ -264,7 +241,6 @@ function App() {
   );
 }
 
-// Composant StatCard réutilisable
 const StatCard = ({ title, value, icon, bg, border }) => (
   <div style={{ background: bg, backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', border: `1px solid ${border}` }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
